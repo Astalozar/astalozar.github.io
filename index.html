@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fate Core - Лист персонажа</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .col {
+            flex: 1;
+            min-width: 120px;
+            margin: 0 5px 5px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 3px;
+            font-size: 13px;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        .aspect-item, .stunt-item, .stress-item {
+            margin-bottom: 10px;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .btn-export {
+            background-color: #27ae60;
+        }
+        .btn-export:hover {
+            background-color: #219653;
+        }
+        .btn-add {
+            background-color: #9b59b6;
+        }
+        .btn-add:hover {
+            background-color: #8e44ad;
+        }
+        .btn-remove {
+            background-color: #e74c3c;
+        }
+        .btn-remove:hover {
+            background-color: #c0392b;
+        }
+        .skills-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+        }
+        .skill-item {
+            display: flex;
+            align-items: center;
+        }
+        .skill-name {
+            flex: 1;
+        }
+        .skill-rank {
+            width: 40px;
+            margin-left: 8px;
+        }
+        .stress-track {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        .stress-box {
+            width: 25px;
+            height: 25px;
+            border: 1px solid #333;
+            margin-right: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .stress-box.checked {
+            background-color: #333;
+            color: white;
+        }
+        .consequences {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+        @media (min-width: 480px) {
+            .consequences {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .skill-header {
+            grid-column: 1 / -1;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="character-sheet">
+        <div class="section">
+            <h1 class="section-title">Fate Core - Лист персонажа</h1>
+            <div class="row">
+                <div class="col">
+                    <label for="character-name">Имя персонажа</label>
+                    <input type="text" id="character-name" placeholder="Введите имя">
+                </div>
+                <div class="col">
+                    <label for="player-name">Имя игрока</label>
+                    <input type="text" id="player-name" placeholder="Ваше имя">
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label for="campaign">Кампания</label>
+                    <input type="text" id="campaign" placeholder="Название кампании">
+                </div>
+                <div class="col">
+                    <label for="refresh">Свободные очки судьбы</label>
+                    <input type="text" id="refresh" value="3">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Аспекты</h2>
+            <div id="aspects-container">
+                <div class="aspect-item">
+                    <label>Концепция</label>
+                    <input type="text" class="aspect" placeholder="Кто ваш персонаж?">
+                </div>
+                <div class="aspect-item">
+                    <label>Трудность</label>
+                    <input type="text" class="aspect" placeholder="Что осложняет жизнь персонажа?">
+                </div>
+                <div class="aspect-item">
+                    <label>Аспект 1</label>
+                    <input type="text" class="aspect" placeholder="Дополнительный аспект">
+                </div>
+                <div class="aspect-item">
+                    <label>Аспект 2</label>
+                    <input type="text" class="aspect" placeholder="Дополнительный аспект">
+                </div>
+                <div class="aspect-item">
+                    <label>Аспект 3</label>
+                    <input type="text" class="aspect" placeholder="Дополнительный аспект">
+                </div>
+            </div>
+            <button class="btn btn-add" id="add-aspect">+ Добавить аспект</button>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Навыки</h2>
+            <div class="skills-container" id="skills-container">
+                <div class="skill-header">+4 (1 навык)</div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +4">
+                    <select class="skill-rank">
+                        <option value="4" selected>+4</option>
+                    </select>
+                </div>
+                
+                <div class="skill-header">+3 (2 навыка)</div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +3">
+                    <select class="skill-rank">
+                        <option value="3" selected>+3</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +3">
+                    <select class="skill-rank">
+                        <option value="3" selected>+3</option>
+                    </select>
+                </div>
+                
+                <div class="skill-header">+2 (3 навыка)</div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +2">
+                    <select class="skill-rank">
+                        <option value="2" selected>+2</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +2">
+                    <select class="skill-rank">
+                        <option value="2" selected>+2</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +2">
+                    <select class="skill-rank">
+                        <option value="2" selected>+2</option>
+                    </select>
+                </div>
+                
+                <div class="skill-header">+1 (4 навыка)</div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +1">
+                    <select class="skill-rank">
+                        <option value="1" selected>+1</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +1">
+                    <select class="skill-rank">
+                        <option value="1" selected>+1</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +1">
+                    <select class="skill-rank">
+                        <option value="1" selected>+1</option>
+                    </select>
+                </div>
+                <div class="skill-item">
+                    <input type="text" class="skill-name" placeholder="Навык +1">
+                    <select class="skill-rank">
+                        <option value="1" selected>+1</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Уловки</h2>
+            <div id="stunts-container">
+                <div class="stunt-item">
+                    <input type="text" class="stunt" placeholder="Название уловки">
+                    <textarea class="stunt-description" placeholder="Описание уловки"></textarea>
+                </div>
+                <!-- Дополнительные уловки будут добавляться здесь -->
+            </div>
+            <button class="btn btn-add" id="add-stunt">+ Добавить уловку</button>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Стресс и последствия</h2>
+            <div class="row">
+                <div class="col">
+                    <h3>Физический стресс</h3>
+                    <div class="stress-track" id="physical-stress">
+                        <div class="stress-box">1</div>
+                        <div class="stress-box">2</div>
+                        <div class="stress-box">3</div>
+                    </div>
+                </div>
+                <div class="col">
+                    <h3>Психический стресс</h3>
+                    <div class="stress-track" id="mental-stress">
+                        <div class="stress-box">1</div>
+                        <div class="stress-box">2</div>
+                        <div class="stress-box">3</div>
+                    </div>
+                </div>
+            </div>
+            <div class="consequences">
+                <div>
+                    <h3>Последствия</h3>
+                    <div class="consequence-item">
+                        <label>Легкое (-2)</label>
+                        <input type="text" id="mild-consequence" placeholder="Легкое последствие">
+                    </div>
+                    <div class="consequence-item">
+                        <label>Среднее (-4)</label>
+                        <input type="text" id="moderate-consequence" placeholder="Среднее последствие">
+                    </div>
+                    <div class="consequence-item">
+                        <label>Тяжелое (-6)</label>
+                        <input type="text" id="severe-consequence" placeholder="Тяжелое последствие">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Заметки</h2>
+            <textarea id="notes" placeholder="Дополнительные заметки о персонаже" style="min-height: 100px;"></textarea>
+        </div>
+
+        <div class="section">
+            <button class="btn btn-export" id="export-pdf">Экспорт в PDF</button>
+            <button class="btn" id="save-character">Сохранить персонажа</button>
+            <button class="btn" id="load-character">Загрузить персонажа</button>
+            <input type="file" id="character-file" accept=".json" style="display: none;">
+        </div>
+    </div>
+
+    <script>
+        // Добавление новых аспектов
+        document.getElementById('add-aspect').addEventListener('click', function() {
+            const container = document.getElementById('aspects-container');
+            const count = container.querySelectorAll('.aspect-item').length + 1;
+            
+            const newAspect = document.createElement('div');
+            newAspect.className = 'aspect-item';
+            newAspect.innerHTML = `
+                <label>Аспект ${count}</label>
+                <input type="text" class="aspect" placeholder="Дополнительный аспект">
+            `;
+            
+            container.appendChild(newAspect);
+        });
+
+        // Добавление новых уловок
+        document.getElementById('add-stunt').addEventListener('click', function() {
+            const container = document.getElementById('stunts-container');
+            
+            const newStunt = document.createElement('div');
+            newStunt.className = 'stunt-item';
+            newStunt.innerHTML = `
+                <input type="text" class="stunt" placeholder="Название уловки">
+                <textarea class="stunt-description" placeholder="Описание уловки"></textarea>
+                <button class="btn btn-remove remove-stunt">×</button>
+            `;
+            
+            container.appendChild(newStunt);
+
+            // Добавляем обработчик удаления для новой кнопки
+            newStunt.querySelector('.remove-stunt').addEventListener('click', function() {
+                container.removeChild(newStunt);
+            });
+        });
+
+        // Обработка стресс-треков
+        document.querySelectorAll('.stress-box').forEach(box => {
+            box.addEventListener('click', function() {
+                this.classList.toggle('checked');
+            });
+        });
+
+        // Экспорт в PDF с возможностью поделиться
+        document.getElementById('export-pdf').addEventListener('click', function() {
+            const { jsPDF } = window.jspdf;
+            const element = document.getElementById('character-sheet');
+            
+            html2canvas(element).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgWidth = 210; // A4 width in mm
+                const pageHeight = 295; // A4 height in mm
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                // Генерируем PDF и предлагаем поделиться
+                const pdfBlob = pdf.output('blob');
+                const fileName = document.getElementById('character-name').value 
+                    ? document.getElementById('character-name').value + '-fate-character.pdf' 
+                    : 'fate-character-sheet.pdf';
+                
+                if (navigator.share) {
+                    // Если API share доступен (мобильные устройства)
+                    navigator.share({
+                        title: 'Fate Core Character Sheet',
+                        text: 'Мой персонаж для Fate Core',
+                        files: [new File([pdfBlob], fileName, { type: 'application/pdf' })]
+                    }).catch(err => {
+                        console.log('Ошибка при попытке поделиться:', err);
+                        // Если поделиться не получилось, предлагаем скачать
+                        pdf.save(fileName);
+                    });
+                } else {
+                    // Если API share недоступен, просто скачиваем
+                    pdf.save(fileName);
+                }
+            });
+        });
+
+        // Сохранение персонажа
+        document.getElementById('save-character').addEventListener('click', function() {
+            const characterData = {
+                name: document.getElementById('character-name').value,
+                player: document.getElementById('player-name').value,
+                campaign: document.getElementById('campaign').value,
+                refresh: document.getElementById('refresh').value,
+                aspects: Array.from(document.querySelectorAll('.aspect')).map(el => el.value),
+                skills: Array.from(document.querySelectorAll('.skill-item')).map(item => ({
+                    name: item.querySelector('.skill-name').value,
+                    rank: item.querySelector('.skill-rank').value
+                })),
+                stunts: Array.from(document.querySelectorAll('.stunt-item')).map(item => ({
+                    name: item.querySelector('.stunt').value,
+                    description: item.querySelector('.stunt-description').value
+                })),
+                stress: {
+                    physical: Array.from(document.getElementById('physical-stress').querySelectorAll('.stress-box')).map(box => box.classList.contains('checked')),
+                    mental: Array.from(document.getElementById('mental-stress').querySelectorAll('.stress-box')).map(box => box.classList.contains('checked'))
+                },
+                consequences: {
+                    mild: document.getElementById('mild-consequence').value,
+                    moderate: document.getElementById('moderate-consequence').value,
+                    severe: document.getElementById('severe-consequence').value
+                },
+                notes: document.getElementById('notes').value
+            };
+
+            const dataStr = JSON.stringify(characterData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportName = characterData.name ? characterData.name.replace(/\s+/g, '-').toLowerCase() + '-fate-character' : 'fate-character';
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportName + '.json');
+            linkElement.click();
+        });
+
+        // Загрузка персонажа
+        document.getElementById('load-character').addEventListener('click', function() {
+            document.getElementById('character-file').click();
+        });
+
+        document.getElementById('character-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const characterData = JSON.parse(e.target.result);
+                    
+                    // Заполняем основные поля
+                    document.getElementById('character-name').value = characterData.name || '';
+                    document.getElementById('player-name').value = characterData.player || '';
+                    document.getElementById('campaign').value = characterData.campaign || '';
+                    document.getElementById('refresh').value = characterData.refresh || '3';
+                    
+                    // Аспекты
+                    const aspectInputs = document.querySelectorAll('.aspect');
+                    characterData.aspects?.forEach((aspect, i) => {
+                        if (i < aspectInputs.length) {
+                            aspectInputs[i].value = aspect;
+                        } else {
+                            // Если аспектов больше, чем полей по умолчанию, добавляем новые
+                            document.getElementById('add-aspect').click();
+                            document.querySelectorAll('.aspect')[i].value = aspect;
+                        }
+                    });
+                    
+                    // Навыки
+                    const skillsContainer = document.getElementById('skills-container');
+                    // Удаляем все навыки, кроме стандартных
+                    const skillHeaders = skillsContainer.querySelectorAll('.skill-header');
+                    skillsContainer.innerHTML = '';
+                    skillHeaders.forEach(header => skillsContainer.appendChild(header));
+                    
+                    // Восстанавливаем стандартные навыки
+                    const skillRanks = [4, 3, 3, 2, 2, 2, 1, 1, 1, 1];
+                    skillRanks.forEach((rank, i) => {
+                        const newSkill = document.createElement('div');
+                        newSkill.className = 'skill-item';
+                        newSkill.innerHTML = `
+                            <input type="text" class="skill-name" placeholder="Навык +${rank}">
+                            <select class="skill-rank">
+                                <option value="${rank}" selected>+${rank}</option>
+                            </select>
+                        `;
+                        skillsContainer.appendChild(newSkill);
+                        
+                        // Заполняем данные, если они есть
+                        if (characterData.skills?.[i]) {
+                            newSkill.querySelector('.skill-name').value = characterData.skills[i].name || '';
+                        }
+                    });
+                    
+                    // Уловки
+                    const stuntsContainer = document.getElementById('stunts-container');
+                    // Удаляем все уловки, кроме первой
+                    while (stuntsContainer.children.length > 1) {
+                        stuntsContainer.removeChild(stuntsContainer.lastChild);
+                    }
+                    // Заполняем первую уловку
+                    if (characterData.stunts?.length > 0) {
+                        const firstStunt = characterData.stunts[0];
+                        stuntsContainer.querySelector('.stunt').value = firstStunt.name || '';
+                        stuntsContainer.querySelector('.stunt-description').value = firstStunt.description || '';
+                        
+                        // Добавляем остальные уловки
+                        for (let i = 1; i < characterData.stunts.length; i++) {
+                            document.getElementById('add-stunt').click();
+                            const newStunt = stuntsContainer.lastChild;
+                            newStunt.querySelector('.stunt').value = characterData.stunts[i].name || '';
+                            newStunt.querySelector('.stunt-description').value = characterData.stunts[i].description || '';
+                        }
+                    }
+                    
+                    // Стресс
+                    if (characterData.stress?.physical) {
+                        characterData.stress.physical.forEach((checked, i) => {
+                            const boxes = document.getElementById('physical-stress').querySelectorAll('.stress-box');
+                            if (boxes[i]) {
+                                if (checked) boxes[i].classList.add('checked');
+                                else boxes[i].classList.remove('checked');
+                            }
+                        });
+                    }
+                    
+                    if (characterData.stress?.mental) {
+                        characterData.stress.mental.forEach((checked, i) => {
+                            const boxes = document.getElementById('mental-stress').querySelectorAll('.stress-box');
+                            if (boxes[i]) {
+                                if (checked) boxes[i].classList.add('checked');
+                                else boxes[i].classList.remove('checked');
+                            }
+                        });
+                    }
+                    
+                    // Последствия
+                    document.getElementById('mild-consequence').value = characterData.consequences?.mild || '';
+                    document.getElementById('moderate-consequence').value = characterData.consequences?.moderate || '';
+                    document.getElementById('severe-consequence').value = characterData.consequences?.severe || '';
+                    
+                    // Заметки
+                    document.getElementById('notes').value = characterData.notes || '';
+                    
+                } catch (error) {
+                    alert('Ошибка при загрузке файла: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+    </script>
+</body>
+</html>
