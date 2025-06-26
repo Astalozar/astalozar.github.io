@@ -72,71 +72,61 @@
 
     <script>
         // Замените этот URL на URL вашего Google Apps Script
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzf_fdnnRb6NwPjgw9qmJbE5qrrmy6aDBvsdC1edTmo05CoM47hcuh2_uvDmgvVywBs4g/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRu4zxBRAvDoBR4LfUzIWMhuyf2sTBl_s2ADZS4qIB1je7l2jRsItVOUEAP0cEaprv5Q/exec';
 
         document.getElementById('submitBtn').addEventListener('click', submitData);
         document.getElementById('fetchBtn').addEventListener('click', fetchData);
 
+        // Для GET-запросов (получение данных)
+        function fetchData() {
+            const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+            const script = document.createElement('script');
+
+            window[callbackName] = function (data) {
+                delete window[callbackName];
+                document.body.removeChild(script);
+                displayData(data);
+            };
+
+            script.src = `${SCRIPT_URL}?callback=${callbackName}`;
+            document.body.appendChild(script);
+        }
+
+        // Для POST-запросов (отправка данных)
         async function submitData() {
             const name = document.getElementById('nameInput').value;
             const email = document.getElementById('emailInput').value;
             const phone = document.getElementById('phoneInput').value;
-            
+
             if (!name || !email) {
                 alert('Пожалуйста, заполните обязательные поля (Имя и Email)');
                 return;
             }
 
-            const data = {
-                name: name,
-                email: email,
-                phone: phone || ''
-            };
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('email', email);
+            formData.append('phone', phone || '');
 
             try {
-                const response = await fetch(SCRIPT_URL, {
+                const response = await fetch(`${SCRIPT_URL}?nocache=${Date.now()}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
+                    mode: 'no-cors',
+                    body: formData
                 });
-                
-                const result = await response.json();
-                document.getElementById('submitStatus').textContent = result.message || 'Данные успешно отправлены!';
+
+                // Так как mode: 'no-cors', мы не получим ответ, но данные отправятся
+                document.getElementById('submitStatus').textContent = 'Данные отправлены (проверьте таблицу)';
                 document.getElementById('submitStatus').style.color = 'green';
-                
-                // Очищаем поля после успешной отправки
+
+                // Очищаем поля
                 document.getElementById('nameInput').value = '';
                 document.getElementById('emailInput').value = '';
                 document.getElementById('phoneInput').value = '';
             } catch (error) {
                 console.error('Ошибка:', error);
-                document.getElementById('submitStatus').textContent = 'Произошла ошибка при отправке данных';
-                document.getElementById('submitStatus').style.color = 'red';
-            }
-        }
-
-        async function fetchData() {
-            try {
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-                
-                if (data && data.length > 0) {
-                    let tableHTML = '<table><tr><th>Имя</th><th>Email</th><th>Телефон</th></tr>';
-                    
-                    data.forEach(row => {
-                        tableHTML += `<tr><td>${row.name || ''}</td><td>${row.email || ''}</td><td>${row.phone || ''}</td></tr>`;
-                    });
-                    
-                    tableHTML += '</table>';
-                    document.getElementById('dataContainer').innerHTML = tableHTML;
-                } else {
-                    document.getElementById('dataContainer').textContent = 'Нет данных для отображения';
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                document.getElementById('dataContainer').textContent = 'Произошла ошибка при загрузке данных';
+                document.getElementById('submitStatus').textContent = 'Данные могут быть отправлены (проверьте таблицу)';
+                document.getElementById('submitStatus').style.color = 'orange';
             }
         }
     </script>
